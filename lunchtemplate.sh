@@ -1,39 +1,31 @@
 #!/bin/bash
-# ------------------------------------------------------------------
-# Unified Production Deployment Script
-# ------------------------------------------------------------------
+# 1. Update the apt package index
+apt-get update -y
 
-export DEBIAN_FRONTEND=noninteractive
-sudo su
-echo "=== [1/4] Installing Docker completely standalone ==="
-apt-get update -yq
-apt-get install -yq docker.io
+# 2. Install prerequisites to allow apt to use a repository over HTTPS
+apt-get install -y ca-certificates curl gnupg lsb-release
 
-# Ensure Docker is actively running before moving to the next line
-systemctl daemon-reload
+# 3. Add Docker’s official GPG key
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# 4. Set up the stable repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.p/docker.list > /dev/null
+
+# 5. Update the apt package index again and install Docker Engine
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# 6. Ensure Docker starts on boot
 systemctl start docker
 systemctl enable docker
-usermod -aG docker ubuntu
 
-echo "=== [2/4] Verifying Docker status ==="
-docker --version
-
-echo "=== [3/4] Pulling application image ==="
-docker pull sunsarun/agar-clone-redis:v1
-
-echo "=== [4/4] Starting Game Container ==="
-docker rm -f agar-game-server || true
-
+# 7. Pull and run the Agar.io clone from GHCR
+# Maps host port 80 to container port 3000
 docker run -d \
-  --name agar-game-server \
+  --name agario-clone \
   --restart always \
-  -p 3000:3000 \
-  -e REDIS_URL='redis://clustercfg.agar-game-redis.zi6aqy.apse1.cache.amazonaws.com:6379' \
-  -e DATABASE_URL='postgresql://postgres:?7NK~MUx4$UD!}M@agar-game-db.cvug6awgsp8o.ap-southeast-1.rds.amazonaws.com:5432/postgres' \
-  -e DB_HOST='agar-game-db.cvug6awgsp8o.ap-southeast-1.rds.amazonaws.com' \
-  -e DB_USER='postgres' \
-  -e DB_PASSWORD='?7NK~MUx4$UD!}M' \
-  -e DB_NAME='postgres' \
-  sunsarun/agar-clone-redis:v1
-
-echo "=== All Steps Completed Successfully ==="
+  -p 80:3000 \
+  ghcr.io/owenashurst/agar.io-clone:master
