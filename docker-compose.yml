@@ -1,6 +1,48 @@
-version: "2"
+version: '3.8'
+
 services:
-    agar:
-        build: .
-        ports:
-            - 3000:3000
+  # 1. The Redis Cache Server
+  local-redis:
+    image: redis:alpine
+    container_name: local-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - game-net
+
+  # 2. The PostgreSQL Database Server
+  local-postgres:
+    image: postgres:alpine
+    container_name: local-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agarioclone
+    ports:
+      - "5432:5432"
+    networks:
+      - game-net
+
+  # 3. Your Custom Game App Server
+  game-server:
+    build: .
+    container_name: agar-game-test
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://local-redis:6379
+      - DB_HOST=local-postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=agarioclone
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - local-redis
+      - local-postgres
+    networks:
+      - game-net
+
+networks:
+  game-net:
+    driver: bridge
