@@ -4,7 +4,7 @@
 # ------------------------------------------------------------------
 
 export DEBIAN_FRONTEND=noninteractive
-
+sudo su
 echo "=== [1/4] Installing Docker completely standalone ==="
 apt-get update -yq
 apt-get install -yq docker.io
@@ -27,7 +27,7 @@ docker rm -f agar-game-server || true
 docker run -d \
   --name agar-game-server \
   --restart always \
-  -p 3000:3000 \
+  -p 80:3000 \
   -e REDIS_URL='redis://clustercfg.agar-game-redis.zi6aqy.apse1.cache.amazonaws.com:6379' \
   -e DATABASE_URL='postgresql://postgres:?7NK~MUx4$UD!}M@agar-game-db.cvug6awgsp8o.ap-southeast-1.rds.amazonaws.com:5432/postgres' \
   -e DB_HOST='agar-game-db.cvug6awgsp8o.ap-southeast-1.rds.amazonaws.com' \
